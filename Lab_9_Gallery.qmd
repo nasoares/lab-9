@@ -13,7 +13,9 @@ editor: visual
 library(tidyverse)
 library(ggthemes)
 library(scales)
+library(ambient)
 
+#phytoplankton monitoring time series from Morro Bay
 hab <- read.csv("data/MBF_upload.csv")
 ```
 
@@ -90,5 +92,25 @@ hab |>
 #| warning: false
 #| label: building-art-two
 
-#Purely generative, using some fractals/polygons?
+#create a canvas
+x_coords <- seq(from = 0, to = 1, length.out = 800)
+y_coords <- seq(from = 0, to = 1, length.out = 800)
+canvas <- long_grid(x = x_coords, y = y_coords) 
+
+#add some generated "paint" to the canvas
+canvas <- canvas |>
+  mutate(paint = gen_simplex(x, y,
+            frequency = 5,                 
+            seed = 29))
+
+#
+art <- ggplot(canvas, aes(x, y, fill = paint)) + 
+  geom_raster(show.legend = FALSE) +
+  theme_void() +
+  coord_equal() +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_gradientn(colours = sample_canva(seed = 42))
+
+
 ```
