@@ -8,15 +8,12 @@ editor: visual
 ```{r}
 #| warning: false
 #| echo: false
-#| label: load-packages-and-data
+#| label: load-packages
 
 library(tidyverse)
 library(ggthemes)
 library(scales)
 library(ambient)
-
-#phytoplankton monitoring time series from Morro Bay
-hab <- read.csv("data/MBF_upload.csv")
 ```
 
 ## Art Piece 1
@@ -25,36 +22,10 @@ hab <- read.csv("data/MBF_upload.csv")
 #| warning: false
 #| label: building-art-one
 
-#exploring color palettes
-sample_canva <- function(seed = NULL) {
-  if(!is.null(seed)) set.seed(seed)
-  sample(ggthemes::canva_palettes, 1)[[1]]
-}
-myPal <- sample_canva(seed = 80)
-show_col(myPal)
+#using a phytoplankton monitoring time series from Morro Bay
+hab <- read.csv("data/MBF_upload.csv")
 
-
-#exploring different values and plots
-hab |>
-  ggplot(aes(Temp..deg.C., 
-             sqrt(Total.Phytoplankton..cells.L.), 
-             colour = Day.of.Year..1.365., 
-             size = Avg.Chloro..mg.m3.)) + 
-  geom_point(show.legend = FALSE) + 
-  coord_polar() + 
-  theme_void() +
-  scale_color_viridis_c()
-
-hab |>
-  ggplot(aes(Day.of.Year..1.365., 
-             sqrt(Total.Phytoplankton..cells.L.), 
-             colour  = Avg.Chloro..mg.m3.)) + 
-  geom_bar(stat = "identity", 
-           show.legend = FALSE) + 
-  coord_polar() + 
-  theme_void() +
-  scale_color_viridis_c()
-
+#modifying and overlaying data on a single plot
 hab |>
   ggplot() +
   geom_point(aes(Day.of.Year..1.365., 
@@ -81,9 +52,6 @@ hab |>
   theme_void() +
   scale_color_viridis_c()
 
-#IDEAS
-#maybe add a GIF component, add some spin by changing the polar coords (x+1 or something) with gganimate?
-
 ```
 
 ## Art Piece 2
@@ -92,6 +60,12 @@ hab |>
 #| warning: false
 #| label: building-art-two
 
+#generate color palettes
+sample_canva <- function(seed = NULL) {
+  if(!is.null(seed)) set.seed(seed)
+  sample(ggthemes::canva_palettes, 1)[[1]]
+}
+
 #create a canvas
 x_coords <- seq(from = 0, to = 1, length.out = 800)
 y_coords <- seq(from = 0, to = 1, length.out = 800)
@@ -99,11 +73,15 @@ canvas <- long_grid(x = x_coords, y = y_coords)
 
 #add some generated "paint" to the canvas
 canvas <- canvas |>
-  mutate(paint = gen_simplex(x, y,
-            frequency = 5,                 
+  mutate(paint = fracture(
+            noise = gen_simplex,
+            x = x,
+            y = y,
+            octaves = 20,
+            fractal = fbm,
             seed = 29))
 
-#
+#putting it all together with a generated color palette
 art <- ggplot(canvas, aes(x, y, fill = paint)) + 
   geom_raster(show.legend = FALSE) +
   theme_void() +
@@ -111,6 +89,60 @@ art <- ggplot(canvas, aes(x, y, fill = paint)) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   scale_fill_gradientn(colours = sample_canva(seed = 42))
+art
 
+#defining the shape of a nonagon
+theta <- (0:9) * pi / 4.5
+nonagon <- tibble(
+  x = sin(theta),
+  y = cos(theta)
+)
+nonagon_scale <- nonagon %>%
+  mutate(x_scale = x/4, 
+         y_scale = y/4)
+
+#plotting nonagon
+pic <- ggplot(nonagon) +
+  geom_polygon(aes(x, y), 
+               colour = "black", 
+               fill = NA, 
+               show.legend = FALSE) +
+  geom_polygon(aes(x-0.5, y-0.5), 
+               colour = "black", 
+               fill = NA, 
+               show.legend = FALSE) +
+    geom_polygon(aes(x+0.5, y+0.5), 
+               colour = "black", 
+               fill = NA, 
+               show.legend = FALSE) +
+  coord_equal() + 
+  theme_void()
+pic
+
+#putting them together
+ggplot() +
+  geom_raster(data = canvas, 
+              aes(x, y, fill = paint), 
+              show.legend = FALSE) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_gradientn(colours = sample_canva(seed = 42)) +
+  geom_polygon(data = nonagon_scale,
+               aes(x_scale, y_scale), 
+               colour = "white", 
+               fill = NA, 
+               show.legend = FALSE) +
+  geom_polygon(data = nonagon_scale,
+               aes(x_scale-0.05, y_scale-0.05), 
+               colour = "black", 
+               fill = NA, 
+               show.legend = FALSE) +
+  geom_polygon(data = nonagon_scale,
+               aes(x_scale+0.05, y_scale+0.05), 
+               colour = "black", 
+               fill = NA, 
+               show.legend = FALSE) +
+  coord_equal() + 
+  theme_void()
 
 ```
