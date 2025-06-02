@@ -3,6 +3,7 @@ title: "Generative Art"
 author: "Nick Soares"
 format: html
 editor: visual
+embed-resources: true
 ---
 
 ```{r}
